@@ -1,0 +1,71 @@
+package disk
+
+import (
+	"fmt"
+	"time"
+
+	sysdisk "github.com/shirou/gopsutil/v4/disk"
+)
+
+// DiskUsage has all values in bytes, except the field
+// Usage which is a percentage.
+type DiskUsage struct {
+	Total float64
+	Used  float64
+	Free  float64
+	Usage float64
+}
+
+func getDiskNames() (map[string]string, error) {
+	partitions, err := sysdisk.Partitions(false) // False returns all physical devices.
+	if err != nil {
+		return map[string]string{}, nil
+	}
+	// Map devices to their mount points
+	deviceMap := make(map[string]string)
+	for _, p := range partitions {
+		deviceMap[p.Device] = p.Mountpoint
+	}
+	return deviceMap, nil
+}
+
+func getDiskUsage(diskName string) (DiskUsage, error) {
+	usage, err := sysdisk.Usage(diskName)
+	if err != nil {
+		return DiskUsage{}, err
+	}
+	return DiskUsage{
+		Total: float64(usage.Total),
+		Used:  float64(usage.Used),
+		Free:  float64(usage.Free),
+		Usage: usage.UsedPercent,
+	}, nil
+}
+
+type DiskThroughput struct {
+	ReadThroughput  float64
+	WriteThroughput float64
+	Interval        float64
+}
+
+func getDiskThroughput(diskName string, interval float64) (DiskThroughput, error) {
+	// ioStats, _ := sysdisk.IOCounters()
+	// for device, stats := range ioStats {
+	// 	fmt.Printf("Device: %s | ReadBytes: %d | WriteBytes: %d\n", device, stats.ReadBytes, stats.WriteBytes)
+	// }
+	ioStatsStart, err := sysdisk.IOCounters(diskName)
+	if err != nil {
+		return DiskThroughput{}, fmt.Errorf("error when getting start stats: %v", err)
+	}
+	time.Sleep(time.Duration(interval) * time.Second)
+	ioStatsEnd, err := sysdisk.IOCounters(diskName)
+	if err != nil {
+		return DiskThroughput{}, fmt.Errorf("error when getting end stats: %v", err)
+	}
+
+	return DiskThroughput{
+		ReadThroughput:  float64(ioStatsEnd[diskName].ReadBytes-ioStatsStart[diskName].ReadBytes) / interval,
+		WriteThroughput: float64(ioStatsEnd[diskName].WriteBytes-ioStatsStart[diskName].WriteBytes) / interval,
+		Interval:        interval,
+	}, nil
+}

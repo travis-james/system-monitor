@@ -17,8 +17,11 @@ type CpuMetric struct {
 	TimeStamp    time.Time // Time the measurement was taken.
 }
 
+// Option is used as an optional argument.
 type Option func(*float64)
 
+// WithSeconds is to allow users to determine the interval in seconds
+// that the cpu utilization/percentage is taken over.
 func WithSeconds(seconds float64) Option {
 	return func(input *float64) {
 		if seconds < 0 || seconds > 180 {
@@ -38,12 +41,12 @@ func getCpuMetrics(options ...Option) (CpuMetric, error) {
 
 	percentages, err := syscpu.Percent(time.Duration(seconds)*time.Second, true)
 	if err != nil {
-		return CpuMetric{}, fmt.Errorf("Error getting CPU usage: %v", err)
+		return CpuMetric{}, fmt.Errorf("error getting CPU usage: %v", err)
 	}
 
 	loadAvg, err := sysload.Avg()
 	if err != nil {
-		return CpuMetric{}, fmt.Errorf("Error in getting load average: %v", err)
+		return CpuMetric{}, fmt.Errorf("error in getting load average: %v", err)
 	}
 	return CpuMetric{
 		Usage:        percentages,
@@ -55,6 +58,7 @@ func getCpuMetrics(options ...Option) (CpuMetric, error) {
 	}, nil
 }
 
+// String returns a string representation of CpuMetric.
 func (cm CpuMetric) String() string {
 	retval := "Usage: "
 	for _, percentage := range cm.Usage {
