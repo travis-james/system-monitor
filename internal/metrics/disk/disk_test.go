@@ -28,8 +28,14 @@ func TestGetDiskUsage(t *testing.T) {
 // Takes a long time to get write data....
 func TestGetDiskThroughput(t *testing.T) {
 	t.Parallel()
-	got, err := getDiskThroughput("nvme0n1", 20)
+	var time float64 = 20
+	got, err := measureDiskThroughput("nvme0n1", time)
 	require.Nil(t, err)
 	assert.Greater(t, got.WriteThroughput, 0.0)
 	assert.Greater(t, got.ReadThroughput, 0.0)
+	assert.Greater(t, got.WriteOps, 0.0)
+	assert.Greater(t, got.ReadOps, 0.0)
+	assert.Greater(t, got.TotalIOPS, 0.0)
+	assert.Equal(t, got.Interval, time)
+	t.Log(got)
 }

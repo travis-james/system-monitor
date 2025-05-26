@@ -45,27 +45,42 @@ func getDiskUsage(diskName string) (DiskUsage, error) {
 type DiskThroughput struct {
 	ReadThroughput  float64
 	WriteThroughput float64
+	ReadOps         float64
+	WriteOps        float64
+	TotalIOPS       float64
 	Interval        float64
 }
 
-func getDiskThroughput(diskName string, interval float64) (DiskThroughput, error) {
-	// ioStats, _ := sysdisk.IOCounters()
-	// for device, stats := range ioStats {
-	// 	fmt.Printf("Device: %s | ReadBytes: %d | WriteBytes: %d\n", device, stats.ReadBytes, stats.WriteBytes)
-	// }
+func measureDiskThroughput(diskName string, interval float64) (DiskThroughput, error) {
 	ioStatsStart, err := sysdisk.IOCounters(diskName)
 	if err != nil {
 		return DiskThroughput{}, fmt.Errorf("error when getting start stats: %v", err)
 	}
+	startStat, exists := ioStatsStart[diskName]
+	if !exists {
+		return DiskThroughput{}, fmt.Errorf("disk name %q not found in start stat", diskName)
+	}
+
 	time.Sleep(time.Duration(interval) * time.Second)
+
 	ioStatsEnd, err := sysdisk.IOCounters(diskName)
 	if err != nil {
 		return DiskThroughput{}, fmt.Errorf("error when getting end stats: %v", err)
 	}
+	endStat, exists := ioStatsEnd[diskName]
+	if !exists {
+		return DiskThroughput{}, fmt.Errorf("disk name %q not found in end stat", diskName)
+	}
+
+	readOps := float64(endStat.ReadCount-startStat.ReadCount) / interval
+	writeOps := float64(endStat.WriteCount-startStat.WriteCount) / interval
 
 	return DiskThroughput{
-		ReadThroughput:  float64(ioStatsEnd[diskName].ReadBytes-ioStatsStart[diskName].ReadBytes) / interval,
-		WriteThroughput: float64(ioStatsEnd[diskName].WriteBytes-ioStatsStart[diskName].WriteBytes) / interval,
+		ReadThroughput:  float64(endStat.ReadBytes-startStat.ReadBytes) / interval,
+		WriteThroughput: float64(endStat.WriteBytes-startStat.WriteBytes) / interval,
+		ReadOps:         readOps,
+		WriteOps:        writeOps,
+		TotalIOPS:       readOps + writeOps,
 		Interval:        interval,
 	}, nil
 }
