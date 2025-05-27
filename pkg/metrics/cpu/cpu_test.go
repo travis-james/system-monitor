@@ -35,6 +35,7 @@ func TestGetCpuMetrics(t *testing.T) {
 				assert.Equal(t, 0.2, got.TimeInterval)
 				assert.False(t, got.TimeStamp.IsZero())
 				assert.NotZero(t, len(got.Usage))
+				assert.Equal(t, len(got.Usage), got.NumberOfCores)
 				assert.Greater(t, got.LoadAvg1, 0.0)
 				assert.Greater(t, got.LoadAvg5, 0.0)
 				assert.Greater(t, got.LoadAvg15, 0.0)
