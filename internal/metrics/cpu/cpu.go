@@ -1,6 +1,7 @@
 package cpu
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -8,6 +9,9 @@ import (
 	sysload "github.com/shirou/gopsutil/v4/load"
 )
 
+const ERR_INVALID_SECONDS = "seconds must be greater than zero"
+
+// CpuMetric contains data for usage (how busy each core is) and load average (how much demand there is for cpu resources)
 type CpuMetric struct {
 	Usage        []float64 // CPU usage as a percentage over a given time interval, each entry represents a core.
 	TimeInterval float64   // The time interval for which usage percentage of the cpu is taken from.
@@ -17,28 +21,12 @@ type CpuMetric struct {
 	TimeStamp    time.Time // Time the measurement was taken.
 }
 
-// Option is used as an optional argument.
-type Option func(*float64)
-
-// WithSeconds is to allow users to determine the interval in seconds
-// that the cpu utilization/percentage is taken over.
-func WithSeconds(seconds float64) Option {
-	return func(input *float64) {
-		if seconds < 0 || seconds > 180 {
-			// TODO: log
-			return
-		}
-		*input = seconds
-		/// This seems unneccessarily comples just for an int...
+// measureCpuMetrics gets all related cpu metrics to put them
+// in a CpuMetric struct.
+func measureCpuMetrics(seconds float64) (CpuMetric, error) {
+	if seconds <= 0 {
+		return CpuMetric{}, errors.New(ERR_INVALID_SECONDS)
 	}
-}
-
-func getCpuMetrics(options ...Option) (CpuMetric, error) {
-	seconds := 1.0
-	for _, opt := range options {
-		opt(&seconds)
-	}
-
 	percentages, err := syscpu.Percent(time.Duration(seconds)*time.Second, true)
 	if err != nil {
 		return CpuMetric{}, fmt.Errorf("error getting CPU usage: %v", err)

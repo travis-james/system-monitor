@@ -16,7 +16,7 @@ type DiskUsage struct {
 	Usage float64
 }
 
-func getDiskNames() (map[string]string, error) {
+func retrieveDeviceMounts() (map[string]string, error) {
 	partitions, err := sysdisk.Partitions(false) // False returns all physical devices.
 	if err != nil {
 		return map[string]string{}, nil
@@ -29,7 +29,7 @@ func getDiskNames() (map[string]string, error) {
 	return deviceMap, nil
 }
 
-func getDiskUsage(diskName string) (DiskUsage, error) {
+func measureDiskUsage(diskName string) (DiskUsage, error) {
 	usage, err := sysdisk.Usage(diskName)
 	if err != nil {
 		return DiskUsage{}, err

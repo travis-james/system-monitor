@@ -9,7 +9,7 @@ import (
 
 func TestGetDiskName(t *testing.T) {
 	t.Parallel()
-	got, err := getDiskNames()
+	got, err := retrieveDeviceMounts()
 	require.Nil(t, err)
 	assert.NotZero(t, got)
 	assert.Greater(t, len(got), 0)
@@ -17,7 +17,7 @@ func TestGetDiskName(t *testing.T) {
 
 func TestGetDiskUsage(t *testing.T) {
 	t.Parallel()
-	got, err := getDiskUsage("/")
+	got, err := measureDiskUsage("/")
 	require.Nil(t, err)
 	assert.Greater(t, got.Total, 0.0)
 	assert.Greater(t, got.Free, 0.0)

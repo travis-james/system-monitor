@@ -9,14 +9,38 @@ import (
 )
 
 func TestGetCpuMetrics(t *testing.T) {
-	got, err := getCpuMetrics(WithSeconds(0.2))
-	require.Nil(t, err)
-	assert.Equal(t, 0.2, got.TimeInterval)
-	assert.False(t, got.TimeStamp.IsZero())
-	assert.NotZero(t, len(got.Usage))
-	assert.Greater(t, got.LoadAvg1, 0.0)
-	assert.Greater(t, got.LoadAvg5, 0.0)
-	assert.Greater(t, got.LoadAvg15, 0.0)
+	tests := []struct {
+		testName    string
+		seconds     float64
+		expectedErr string
+	}{
+		{
+			testName:    "seconds less than zero",
+			seconds:     -1,
+			expectedErr: ERR_INVALID_SECONDS,
+		},
+		{
+			testName: "happy path",
+			seconds:  0.2,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.testName, func(t *testing.T) {
+			got, err := measureCpuMetrics(test.seconds)
+			if test.expectedErr != "" {
+				require.NotNil(t, err)
+				assert.Equal(t, test.expectedErr, err.Error())
+			} else {
+				require.Nil(t, err)
+				assert.Equal(t, 0.2, got.TimeInterval)
+				assert.False(t, got.TimeStamp.IsZero())
+				assert.NotZero(t, len(got.Usage))
+				assert.Greater(t, got.LoadAvg1, 0.0)
+				assert.Greater(t, got.LoadAvg5, 0.0)
+				assert.Greater(t, got.LoadAvg15, 0.0)
+			}
+		})
+	}
 }
 
 func TestString(t *testing.T) {
