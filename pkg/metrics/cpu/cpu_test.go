@@ -26,7 +26,7 @@ func TestGetCpuMetrics(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {
-			got, err := measureCpuMetrics(test.seconds)
+			got, err := MeasureCpuMetrics(test.seconds)
 			if test.expectedErr != "" {
 				require.NotNil(t, err)
 				assert.Equal(t, test.expectedErr, err.Error())

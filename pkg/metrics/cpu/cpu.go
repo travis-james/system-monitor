@@ -23,7 +23,7 @@ type CpuMetric struct {
 
 // measureCpuMetrics gets all related cpu metrics to put them
 // in a CpuMetric struct.
-func measureCpuMetrics(seconds float64) (CpuMetric, error) {
+func MeasureCpuMetrics(seconds float64) (CpuMetric, error) {
 	if seconds <= 0 {
 		return CpuMetric{}, errors.New(ERR_INVALID_SECONDS)
 	}
