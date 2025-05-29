@@ -1,0 +1,3 @@
+Use dependency injection to test functions independently.
+
+Focus on correctness of logic without relying on real system calls.

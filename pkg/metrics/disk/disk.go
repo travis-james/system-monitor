@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	sysdisk "github.com/shirou/gopsutil/v4/disk"
+	gopsutilDisk "github.com/shirou/gopsutil/v4/disk"
 )
 
 type DiskMetric struct {
@@ -54,7 +54,15 @@ func MeasureDiskMetrics(diskName string, interval float64) (DiskMetric, error) {
 // This function can be used to see what available devices there are, then
 // a user can pass the corresponding value to MeasureDiskMetrics.
 func RetrieveDeviceMounts() (map[string]string, error) {
-	partitions, err := sysdisk.Partitions(false) // False returns all physical devices.
+	return retrieveDeviceMounts(gopsutilDisk.Partitions)
+}
+
+// PartitionRetriever is for dependency injection for RetrieveDeviceMounts.
+type PartitionRetriever func(bool) ([]gopsutilDisk.PartitionStat, error)
+
+// for dependency injection, see RetrieveDeviceMounts.
+func retrieveDeviceMounts(partitionFunc PartitionRetriever) (map[string]string, error) {
+	partitions, err := partitionFunc(false) // False returns all physical devices.
 	if err != nil {
 		return map[string]string{}, fmt.Errorf("error when getting paritions: %v", err)
 	}
@@ -67,7 +75,7 @@ func RetrieveDeviceMounts() (map[string]string, error) {
 }
 
 func measureDiskUsage(diskName string) (DiskUsage, error) {
-	usage, err := sysdisk.Usage(diskName)
+	usage, err := gopsutilDisk.Usage(diskName)
 	if err != nil {
 		return DiskUsage{}, err
 	}
@@ -80,7 +88,7 @@ func measureDiskUsage(diskName string) (DiskUsage, error) {
 }
 
 func measureDiskThroughput(blockDeviceName string, interval float64) (DiskThroughput, error) {
-	ioStatsStart, err := sysdisk.IOCounters(blockDeviceName)
+	ioStatsStart, err := gopsutilDisk.IOCounters(blockDeviceName)
 	if err != nil {
 		return DiskThroughput{}, fmt.Errorf("error when getting start stats: %v", err)
 	}
@@ -92,7 +100,7 @@ func measureDiskThroughput(blockDeviceName string, interval float64) (DiskThroug
 
 	time.Sleep(time.Duration(interval) * time.Second)
 
-	ioStatsEnd, err := sysdisk.IOCounters(blockDeviceName)
+	ioStatsEnd, err := gopsutilDisk.IOCounters(blockDeviceName)
 	if err != nil {
 		return DiskThroughput{}, fmt.Errorf("error when getting end stats: %v", err)
 	}
