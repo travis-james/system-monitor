@@ -7,9 +7,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGetDiskName(t *testing.T) {
+func TestRetrieveDeviceMounts(t *testing.T) {
 	t.Parallel()
-	got, err := retrieveDeviceMounts()
+	got, err := RetrieveDeviceMounts()
+	t.Log(got)
 	require.Nil(t, err)
 	assert.NotZero(t, got)
 	assert.Greater(t, len(got), 0)

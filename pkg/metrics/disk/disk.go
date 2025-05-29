@@ -7,6 +7,12 @@ import (
 	sysdisk "github.com/shirou/gopsutil/v4/disk"
 )
 
+type DiskMetric struct {
+	DiskUsage
+	DiskThroughput
+	TimeStamp time.Time // Time the measurement was taken.
+}
+
 // DiskUsage has all values in bytes, except the field
 // Usage which is a percentage.
 type DiskUsage struct {
@@ -16,7 +22,22 @@ type DiskUsage struct {
 	Usage float64
 }
 
-func retrieveDeviceMounts() (map[string]string, error) {
+type DiskThroughput struct {
+	ReadThroughput  float64
+	WriteThroughput float64
+	ReadOps         float64
+	WriteOps        float64
+	TotalIOPS       float64
+	Interval        float64
+}
+
+func MeasureDiskMetrics(diskName string) (DiskMetric, error) {
+	return DiskMetric{}, nil
+}
+
+// RetrieveDeviceMounts returns a map that has it's keys (device name/path)
+// mapped to a mounted file system.
+func RetrieveDeviceMounts() (map[string]string, error) {
 	partitions, err := sysdisk.Partitions(false) // False returns all physical devices.
 	if err != nil {
 		return map[string]string{}, nil
@@ -40,15 +61,6 @@ func measureDiskUsage(diskName string) (DiskUsage, error) {
 		Free:  float64(usage.Free),
 		Usage: usage.UsedPercent,
 	}, nil
-}
-
-type DiskThroughput struct {
-	ReadThroughput  float64
-	WriteThroughput float64
-	ReadOps         float64
-	WriteOps        float64
-	TotalIOPS       float64
-	Interval        float64
 }
 
 func measureDiskThroughput(diskName string, interval float64) (DiskThroughput, error) {
