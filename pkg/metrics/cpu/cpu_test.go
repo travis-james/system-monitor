@@ -9,6 +9,7 @@ import (
 )
 
 func TestGetCpuMetrics(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		testName    string
 		seconds     float64
@@ -45,6 +46,7 @@ func TestGetCpuMetrics(t *testing.T) {
 }
 
 func TestString(t *testing.T) {
+	t.Parallel()
 	input := CpuMetric{
 		Usage:        []float64{1, 2, 3},
 		TimeInterval: 0.3,
