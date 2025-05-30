@@ -16,9 +16,9 @@ type DiskMetric struct {
 // DiskUsage has all values in bytes, except the field Usage which is a
 // percentage.
 type DiskUsage struct {
-	Total float64
-	Used  float64
-	Free  float64
+	Total uint64
+	Used  uint64
+	Free  uint64
 	Usage float64
 }
 
@@ -33,11 +33,11 @@ type DiskThroughput struct {
 
 // MeasureDiskMetrics is a wrapper for measureDiskUsage and measureDiskThroughput.
 func MeasureDiskMetrics(diskName string, interval float64) (DiskMetric, error) {
-	diskUsage, err := measureDiskUsage(diskName)
+	diskUsage, err := measureDiskUsage(gopsutilDisk.Usage, diskName)
 	if err != nil {
 		return DiskMetric{}, err
 	}
-	diskThroughput, err := measureDiskThroughput(diskName, interval)
+	diskThroughput, err := measureDiskThroughput(gopsutilDisk.IOCounters, diskName, interval)
 	if err != nil {
 		return DiskMetric{}, err
 	}
@@ -57,11 +57,11 @@ func RetrieveDeviceMounts() (map[string]string, error) {
 	return retrieveDeviceMounts(gopsutilDisk.Partitions)
 }
 
-// PartitionRetriever is for dependency injection for RetrieveDeviceMounts.
-type PartitionRetriever func(bool) ([]gopsutilDisk.PartitionStat, error)
+// PartitionsFunc is for dependency injection for RetrieveDeviceMounts.
+type PartitionsFunc func(bool) ([]gopsutilDisk.PartitionStat, error)
 
 // for dependency injection, see RetrieveDeviceMounts.
-func retrieveDeviceMounts(partitionFunc PartitionRetriever) (map[string]string, error) {
+func retrieveDeviceMounts(partitionFunc PartitionsFunc) (map[string]string, error) {
 	partitions, err := partitionFunc(false) // False returns all physical devices.
 	if err != nil {
 		return map[string]string{}, fmt.Errorf("error when getting paritions: %v", err)
@@ -74,21 +74,27 @@ func retrieveDeviceMounts(partitionFunc PartitionRetriever) (map[string]string, 
 	return deviceMap, nil
 }
 
-func measureDiskUsage(diskName string) (DiskUsage, error) {
-	usage, err := gopsutilDisk.Usage(diskName)
+// diskUsageFunc is for dependency injection for measureDiskUsage.
+type diskUsageFunc func(string) (*gopsutilDisk.UsageStat, error)
+
+func measureDiskUsage(duf diskUsageFunc, diskName string) (DiskUsage, error) {
+	usage, err := duf(diskName)
 	if err != nil {
 		return DiskUsage{}, err
 	}
 	return DiskUsage{
-		Total: float64(usage.Total),
-		Used:  float64(usage.Used),
-		Free:  float64(usage.Free),
+		Total: usage.Total,
+		Used:  usage.Used,
+		Free:  usage.Free,
 		Usage: usage.UsedPercent,
 	}, nil
 }
 
-func measureDiskThroughput(blockDeviceName string, interval float64) (DiskThroughput, error) {
-	ioStatsStart, err := gopsutilDisk.IOCounters(blockDeviceName)
+// ioCountersFunc is for dependency injection for measureDiskThroughput.
+type ioCountersFunc func(...string) (map[string]gopsutilDisk.IOCountersStat, error)
+
+func measureDiskThroughput(iocf ioCountersFunc, blockDeviceName string, interval float64) (DiskThroughput, error) {
+	ioStatsStart, err := iocf(blockDeviceName)
 	if err != nil {
 		return DiskThroughput{}, fmt.Errorf("error when getting start stats: %v", err)
 	}
@@ -124,7 +130,7 @@ func measureDiskThroughput(blockDeviceName string, interval float64) (DiskThroug
 
 func (dm DiskMetric) String() string {
 	return fmt.Sprintf(
-		"DiskUsage: {\nTotal: %.2f\nUsed: %.2f\nFree: %.2f\nUsage: %.2f\n}\n"+
+		"DiskUsage: {\nTotal: %d\nUsed: %.d\nFree: %d\nUsage: %.2f\n}\n"+
 			"DiskThroughput: {\nReadThroughput: %.2f\nWriteThroughput: %.2f\n"+
 			"ReadOps: %.2f\nWriteOps: %.2f\nTotalIOPS: %.2f\nInterval: %.2f\n}\n"+
 			"%v",

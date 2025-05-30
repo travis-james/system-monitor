@@ -14,13 +14,13 @@ import (
 // }
 
 func TestRetrieveDeviceMounts(t *testing.T) {
+	t.Parallel()
 	mockPartitions := func(_ bool) ([]gopsutilDisk.PartitionStat, error) {
 		return []gopsutilDisk.PartitionStat{
 			{Device: "/dev/nvme01", Mountpoint: "/"},
 			{Device: "/dev/nvme02", Mountpoint: "/mnt"},
 		}, nil
 	}
-	t.Parallel()
 	got, err := retrieveDeviceMounts(mockPartitions)
 	require.Nil(t, err)
 	expected := map[string]string{
@@ -30,28 +30,46 @@ func TestRetrieveDeviceMounts(t *testing.T) {
 	assert.Equal(t, fmt.Sprintf("%v", got), fmt.Sprintf("%v", expected))
 }
 
-// func TestGetDiskUsage(t *testing.T) {
-// 	t.Parallel()
-// 	got, err := measureDiskUsage("/")
-// 	require.Nil(t, err)
-// 	assert.Greater(t, got.Total, 0.0)
-// 	assert.Greater(t, got.Free, 0.0)
-// 	assert.Greater(t, got.Used, 0.0)
-// 	assert.Greater(t, got.Usage, 0.0)
-// }
+func TestMeasureDiskUsage(t *testing.T) {
+	t.Parallel()
+	var (
+		total       uint64  = 54
+		used        uint64  = 44
+		free        uint64  = 34
+		usedPercent float64 = 2.4
+	)
+	mockUsage := func(_ string) (*gopsutilDisk.UsageStat, error) {
+		return &gopsutilDisk.UsageStat{
+			Total:       total,
+			Used:        used,
+			Free:        free,
+			UsedPercent: usedPercent,
+		}, nil
+	}
+	got, err := measureDiskUsage(mockUsage, "/")
+	require.Nil(t, err)
+	assert.Equal(t, got.Total, total)
+	assert.Equal(t, got.Free, free)
+	assert.Equal(t, got.Used, used)
+	assert.Equal(t, got.Usage, usedPercent)
+}
 
-// Takes a long time to get write data....
-// func TestGetDiskThroughput(t *testing.T) {
-// 	t.Parallel()
-// 	var time float64 = 5
+func TestGetDiskThroughput(t *testing.T) {
+	t.Parallel()
+	mockIOCounter := func(_ string) (map[string]gopsutilDisk.IOCountersStat, error) {
+		return map[string]gopsutilDisk.IOCountersStat{
+			"nvme0n1": gopsutilDisk.IOCountersStat{},
+		}, nil
+	}
+	var time float64 = 5
 
-// 	got, err := measureDiskThroughput("nvme0n1", time)
-// 	require.Nil(t, err)
-// 	assert.Greater(t, got.WriteThroughput, 0.0)
-// 	assert.Greater(t, got.ReadThroughput, 0.0)
-// 	assert.Greater(t, got.WriteOps, 0.0)
-// 	assert.Greater(t, got.ReadOps, 0.0)
-// 	assert.Greater(t, got.TotalIOPS, 0.0)
-// 	assert.Equal(t, got.Interval, time)
-// 	t.Log(DiskMetric{DiskThroughput: got}.String())
-// }
+	got, err := measureDiskThroughput("nvme0n1", time)
+	require.Nil(t, err)
+	assert.Greater(t, got.WriteThroughput, 0.0)
+	assert.Greater(t, got.ReadThroughput, 0.0)
+	assert.Greater(t, got.WriteOps, 0.0)
+	assert.Greater(t, got.ReadOps, 0.0)
+	assert.Greater(t, got.TotalIOPS, 0.0)
+	assert.Equal(t, got.Interval, time)
+	t.Log(DiskMetric{DiskThroughput: got}.String())
+}
