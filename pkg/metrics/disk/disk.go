@@ -57,11 +57,11 @@ func RetrieveDeviceMounts() (map[string]string, error) {
 	return retrieveDeviceMounts(gopsutilDisk.Partitions)
 }
 
-// PartitionsFunc is for dependency injection for RetrieveDeviceMounts.
-type PartitionsFunc func(bool) ([]gopsutilDisk.PartitionStat, error)
+// partitionsFunc is for dependency injection for RetrieveDeviceMounts.
+type partitionsFunc func(bool) ([]gopsutilDisk.PartitionStat, error)
 
 // for dependency injection, see RetrieveDeviceMounts.
-func retrieveDeviceMounts(partitionFunc PartitionsFunc) (map[string]string, error) {
+func retrieveDeviceMounts(partitionFunc partitionsFunc) (map[string]string, error) {
 	partitions, err := partitionFunc(false) // False returns all physical devices.
 	if err != nil {
 		return map[string]string{}, fmt.Errorf("error when getting paritions: %v", err)
@@ -90,7 +90,8 @@ func measureDiskUsage(duf diskUsageFunc, diskName string) (DiskUsage, error) {
 	}, nil
 }
 
-// ioCountersFunc is for dependency injection for measureDiskThroughput.
+// ioCountersFunc is for dependency injection for measureDiskThroughput to
+// be used with gopsutilDisk.IOCounters.
 type ioCountersFunc func(...string) (map[string]gopsutilDisk.IOCountersStat, error)
 
 func measureDiskThroughput(iocf ioCountersFunc, blockDeviceName string, interval float64) (DiskThroughput, error) {

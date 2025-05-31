@@ -10,10 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// func TestMeasureDiskMetrics(t *testing.T) {
-
-// }
-
 func TestRetrieveDeviceMounts(t *testing.T) {
 	t.Parallel()
 	mockPartitions := func(_ bool) ([]gopsutilDisk.PartitionStat, error) {

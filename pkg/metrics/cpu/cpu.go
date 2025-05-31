@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	syscpu "github.com/shirou/gopsutil/v4/cpu"
-	sysload "github.com/shirou/gopsutil/v4/load"
+	gopsutilCPU "github.com/shirou/gopsutil/v4/cpu"
+	gopsutilLoad "github.com/shirou/gopsutil/v4/load"
 )
 
 const ERR_INVALID_SECONDS = "seconds must be greater than zero"
@@ -22,22 +22,32 @@ type CpuMetric struct {
 	TimeStamp     time.Time // Time the measurement was taken.
 }
 
+// MeasureCpuMetrics is the public wrapper for measureCpuMetrics.
+// Will get all related cpu metrics and return CpuMetric.
 func MeasureCpuMetrics(seconds float64) (CpuMetric, error) {
-	return measureCpuMetrics(syscpu.Percent, sysload.Avg, seconds)
+	return measureCpuMetrics(gopsutilCPU.Percent, gopsutilLoad.Avg, seconds)
 }
+
+// percentFunc is dependency injection for measureCpuMetrics and
+// gopsutilCPU.Percent.
+type percentFunc func(time.Duration, bool) ([]float64, error)
+
+// loadAvgFunc is dependency injection for measureCpuMetrics and
+// gopsutilLoad.Avg.
+type loadAvgFunc func() (*gopsutilLoad.AvgStat, error)
 
 // measureCpuMetrics gets all related cpu metrics to put them
 // in a CpuMetric struct.
-func measureCpuMetrics(seconds float64) (CpuMetric, error) {
+func measureCpuMetrics(getPercentageUsage percentFunc, getLoadAvg loadAvgFunc, seconds float64) (CpuMetric, error) {
 	if seconds <= 0 {
 		return CpuMetric{}, errors.New(ERR_INVALID_SECONDS)
 	}
-	percentages, err := syscpu.Percent(time.Duration(seconds)*time.Second, true)
+	percentages, err := getPercentageUsage(time.Duration(seconds)*time.Second, true)
 	if err != nil {
 		return CpuMetric{}, fmt.Errorf("error getting CPU usage: %v", err)
 	}
 
-	loadAvg, err := sysload.Avg()
+	loadAvg, err := getLoadAvg()
 	if err != nil {
 		return CpuMetric{}, fmt.Errorf("error in getting load average: %v", err)
 	}

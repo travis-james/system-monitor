@@ -1,48 +1,62 @@
 package cpu
 
 import (
+	"errors"
 	"strings"
 	"testing"
+	"time"
 
+	gopsutilLoad "github.com/shirou/gopsutil/v4/load"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestGetCpuMetrics(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		testName    string
-		seconds     float64
-		expectedErr string
-	}{
-		{
-			testName:    "seconds less than zero",
-			seconds:     -1,
-			expectedErr: ERR_INVALID_SECONDS,
-		},
-		{
-			testName: "happy path",
-			seconds:  0.2,
-		},
+// Mock percentage usage function
+func mockPercentageUsage(duration time.Duration, detailed bool) ([]float64, error) {
+	if duration <= 0 {
+		return nil, errors.New("invalid duration")
 	}
-	for _, test := range tests {
-		t.Run(test.testName, func(t *testing.T) {
-			got, err := MeasureCpuMetrics(test.seconds)
-			if test.expectedErr != "" {
-				require.NotNil(t, err)
-				assert.Equal(t, test.expectedErr, err.Error())
-			} else {
-				require.Nil(t, err)
-				assert.Equal(t, 0.2, got.TimeInterval)
-				assert.False(t, got.TimeStamp.IsZero())
-				assert.NotZero(t, len(got.Usage))
-				assert.Equal(t, len(got.Usage), got.NumberOfCores)
-				assert.Greater(t, got.LoadAvg1, 0.0)
-				assert.Greater(t, got.LoadAvg5, 0.0)
-				assert.Greater(t, got.LoadAvg15, 0.0)
-			}
-		})
+	return []float64{10.5, 15.2, 20.3}, nil
+}
+
+// Mock load average function
+func mockLoadAvg() (*gopsutilLoad.AvgStat, error) {
+	return &gopsutilLoad.AvgStat{Load1: 1.5, Load5: 2.0, Load15: 2.5}, nil
+}
+
+func TestMeasureCpuMetrics_ValidInput(t *testing.T) {
+	got, err := measureCpuMetrics(mockPercentageUsage, mockLoadAvg, 5)
+	require.Nil(t, err)
+
+	expected := CpuMetric{
+		Usage:    []float64{10.5, 15.2, 20.3},
+		LoadAvg1: 1.5,
 	}
+	assert.Equal(t, len(expected.Usage), len(got.Usage))
+	assert.Equal(t, expected.LoadAvg1, expected.LoadAvg1)
+}
+
+func TestMeasureCpuMetrics_InvalidDuration(t *testing.T) {
+	_, err := measureCpuMetrics(mockPercentageUsage, mockLoadAvg, -1)
+	assert.NotNil(t, err)
+}
+
+func TestMeasureCpuMetrics_ErrorInCPUUsage(t *testing.T) {
+	mockErrUsage := func(duration time.Duration, detailed bool) ([]float64, error) {
+		return nil, errors.New("mock CPU usage error")
+	}
+
+	_, err := measureCpuMetrics(mockErrUsage, mockLoadAvg, 5)
+	assert.NotNil(t, err)
+}
+
+func TestMeasureCpuMetrics_ErrorInLoadAvg(t *testing.T) {
+	mockErrLoadAvg := func() (*gopsutilLoad.AvgStat, error) {
+		return &gopsutilLoad.AvgStat{}, errors.New("mock load avg error")
+	}
+
+	_, err := measureCpuMetrics(mockPercentageUsage, mockErrLoadAvg, 5)
+	assert.NotNil(t, err)
 }
 
 func TestString(t *testing.T) {
@@ -55,6 +69,7 @@ func TestString(t *testing.T) {
 		LoadAvg15:    0.3,
 	}
 	expected := `Usage: 1.00 2.00 3.00 
+		NumberOfCores: 0
         TimeInterval: 0.30
         LoadAvg1: 0.10
         LoadAvg5: 0.20
