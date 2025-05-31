@@ -106,7 +106,7 @@ func measureDiskThroughput(iocf ioCountersFunc, blockDeviceName string, interval
 
 	time.Sleep(time.Duration(interval) * time.Second)
 
-	ioStatsEnd, err := gopsutilDisk.IOCounters(blockDeviceName)
+	ioStatsEnd, err := iocf(blockDeviceName)
 	if err != nil {
 		return DiskThroughput{}, fmt.Errorf("error when getting end stats: %v", err)
 	}
@@ -128,7 +128,7 @@ func measureDiskThroughput(iocf ioCountersFunc, blockDeviceName string, interval
 	}, nil
 }
 
-func (dm DiskMetric) String() string {
+func (dm DiskMetric) String() string { // Maybe I should just make a json function...
 	return fmt.Sprintf(
 		"DiskUsage: {\nTotal: %d\nUsed: %.d\nFree: %d\nUsage: %.2f\n}\n"+
 			"DiskThroughput: {\nReadThroughput: %.2f\nWriteThroughput: %.2f\n"+

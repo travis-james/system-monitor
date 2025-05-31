@@ -3,6 +3,7 @@ package disk
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	gopsutilDisk "github.com/shirou/gopsutil/v4/disk"
 	"github.com/stretchr/testify/assert"
@@ -56,14 +57,23 @@ func TestMeasureDiskUsage(t *testing.T) {
 
 func TestGetDiskThroughput(t *testing.T) {
 	t.Parallel()
-	mockIOCounter := func(_ string) (map[string]gopsutilDisk.IOCountersStat, error) {
-		return map[string]gopsutilDisk.IOCountersStat{
-			"nvme0n1": gopsutilDisk.IOCountersStat{},
-		}, nil
+	mockUsage := func() ioCountersFunc {
+		count := 0
+		return func(...string) (map[string]gopsutilDisk.IOCountersStat, error) {
+			count += 1000 // Simulating an increase in disk stats
+			return map[string]gopsutilDisk.IOCountersStat{
+				"mockDisk": {
+					ReadBytes:  uint64(count),
+					WriteBytes: uint64(count * 2),
+					ReadCount:  uint64(count / 100),
+					WriteCount: uint64(count / 200),
+				},
+			}, nil
+		}
 	}
-	var time float64 = 5
+	var time float64 = 0.1
 
-	got, err := measureDiskThroughput("nvme0n1", time)
+	got, err := measureDiskThroughput(mockUsage(), "mockDisk", time)
 	require.Nil(t, err)
 	assert.Greater(t, got.WriteThroughput, 0.0)
 	assert.Greater(t, got.ReadThroughput, 0.0)
@@ -71,5 +81,25 @@ func TestGetDiskThroughput(t *testing.T) {
 	assert.Greater(t, got.ReadOps, 0.0)
 	assert.Greater(t, got.TotalIOPS, 0.0)
 	assert.Equal(t, got.Interval, time)
-	t.Log(DiskMetric{DiskThroughput: got}.String())
+}
+
+func TestString(t *testing.T) {
+	dm := DiskMetric{
+		DiskUsage: DiskUsage{
+			Total: 5,
+			Used:  4,
+			Free:  3,
+			Usage: 0.9,
+		},
+		DiskThroughput: DiskThroughput{
+			ReadThroughput:  99,
+			WriteThroughput: 98,
+			ReadOps:         97,
+			WriteOps:        96,
+			TotalIOPS:       95,
+			Interval:        1.5,
+		},
+		TimeStamp: time.Now(),
+	}
+	t.Log(dm.String())
 }
