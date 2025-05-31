@@ -22,9 +22,13 @@ type CpuMetric struct {
 	TimeStamp     time.Time // Time the measurement was taken.
 }
 
+func MeasureCpuMetrics(seconds float64) (CpuMetric, error) {
+	return measureCpuMetrics(syscpu.Percent, sysload.Avg, seconds)
+}
+
 // measureCpuMetrics gets all related cpu metrics to put them
 // in a CpuMetric struct.
-func MeasureCpuMetrics(seconds float64) (CpuMetric, error) {
+func measureCpuMetrics(seconds float64) (CpuMetric, error) {
 	if seconds <= 0 {
 		return CpuMetric{}, errors.New(ERR_INVALID_SECONDS)
 	}
