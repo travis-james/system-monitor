@@ -10,3 +10,6 @@ based on the mount point.
 
 disk.IOCounters("sda") → Gets I/O stats (read/write activity) 
 for the physical device.
+
+Since / is a mount point, you should first retrieve device names 
+with disk.Partitions() before calling IOCounters().
