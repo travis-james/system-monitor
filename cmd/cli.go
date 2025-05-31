@@ -19,8 +19,8 @@ func RunCLI() {
 		os.Exit(1)
 	}
 
-	metricsType := strings.Split(*metricsToCollect, ",")
-	for _, metric := range metricsType {
+	metricsType := strings.SplitSeq(*metricsToCollect, ",")
+	for metric := range metricsType {
 		switch metric {
 		case "cpu":
 			cpuMetrics, err := cpu.MeasureCpuMetrics(*seconds)
