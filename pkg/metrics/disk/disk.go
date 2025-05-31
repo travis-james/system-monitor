@@ -57,6 +57,18 @@ func RetrieveDeviceMounts() (map[string]string, error) {
 	return retrieveDeviceMounts(gopsutilDisk.Partitions)
 }
 
+func RetrieveDeviceMountsToString() (string, error) {
+	mappedNames, err := retrieveDeviceMounts(gopsutilDisk.Partitions)
+	if err != nil {
+		return "", err
+	}
+	var retval string
+	for key, val := range mappedNames {
+		retval += fmt.Sprintf("%s : %s\n", key, val)
+	}
+	return retval, nil
+}
+
 // partitionsFunc is for dependency injection for RetrieveDeviceMounts.
 type partitionsFunc func(bool) ([]gopsutilDisk.PartitionStat, error)
 
@@ -77,8 +89,8 @@ func retrieveDeviceMounts(partitionFunc partitionsFunc) (map[string]string, erro
 // diskUsageFunc is for dependency injection for measureDiskUsage.
 type diskUsageFunc func(string) (*gopsutilDisk.UsageStat, error)
 
-func measureDiskUsage(duf diskUsageFunc, diskName string) (DiskUsage, error) {
-	usage, err := duf(diskName)
+func measureDiskUsage(getDiskUsage diskUsageFunc, mountPoint string) (DiskUsage, error) {
+	usage, err := getDiskUsage(mountPoint)
 	if err != nil {
 		return DiskUsage{}, err
 	}
@@ -94,8 +106,8 @@ func measureDiskUsage(duf diskUsageFunc, diskName string) (DiskUsage, error) {
 // be used with gopsutilDisk.IOCounters.
 type ioCountersFunc func(...string) (map[string]gopsutilDisk.IOCountersStat, error)
 
-func measureDiskThroughput(iocf ioCountersFunc, blockDeviceName string, interval float64) (DiskThroughput, error) {
-	ioStatsStart, err := iocf(blockDeviceName)
+func measureDiskThroughput(getIOCounters ioCountersFunc, blockDeviceName string, interval float64) (DiskThroughput, error) {
+	ioStatsStart, err := getIOCounters(blockDeviceName)
 	if err != nil {
 		return DiskThroughput{}, fmt.Errorf("error when getting start stats: %v", err)
 	}
@@ -107,7 +119,7 @@ func measureDiskThroughput(iocf ioCountersFunc, blockDeviceName string, interval
 
 	time.Sleep(time.Duration(interval) * time.Second)
 
-	ioStatsEnd, err := iocf(blockDeviceName)
+	ioStatsEnd, err := getIOCounters(blockDeviceName)
 	if err != nil {
 		return DiskThroughput{}, fmt.Errorf("error when getting end stats: %v", err)
 	}
