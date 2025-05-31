@@ -28,7 +28,8 @@ func TestMeasureMemoryMetrics_ValidStats(t *testing.T) {
 	got, err := measureMemoryMetrics(mockVirtualMemory(mockStats, nil))
 	require.Nil(t, err)
 	assert.Equal(t, used, got.UsedMemory)
-	assert.Equal(t, got, got.AvailableMemory)
+	assert.Equal(t, available, got.AvailableMemory)
+	assert.NotZero(t, got.TimeStamp)
 }
 
 func TestMeasureMemoryMetrics_ErrorCase(t *testing.T) {

@@ -1,10 +1,15 @@
 package memory
 
-import gopsutilMem "github.com/shirou/gopsutil/v4/mem"
+import (
+	"time"
+
+	gopsutilMem "github.com/shirou/gopsutil/v4/mem"
+)
 
 type MemoryMetric struct {
 	UsedMemory      uint64
 	AvailableMemory uint64
+	TimeStamp       time.Time
 }
 
 func MeasureMemoryMetrics() (MemoryMetric, error) {
@@ -21,5 +26,6 @@ func measureMemoryMetrics(getVirtualMemory virtualMemoryFunc) (MemoryMetric, err
 	return MemoryMetric{
 		UsedMemory:      memStats.Used,
 		AvailableMemory: memStats.Available,
+		TimeStamp:       time.Now(),
 	}, nil
 }
